@@ -388,24 +388,44 @@ def render_manage_view(rows, folder, key_prefix):
         st.info("표시할 주소가 없습니다.")
         return
 
-    labels = [f"[{category(r.get('category'))}] {s(r.get('name'))} / {phone(r.get('phone'))} / 수량 {qty(r.get('quantity'))} / {s(r.get('product_name'))}" for r in filtered]
-    selected = st.selectbox("수정할 주소 선택", labels, key=f"{key_prefix}_select")
-    row = filtered[labels.index(selected)]
-    row_id = row.get("id")
+    # 핵심 수정: selectbox는 label이 아니라 DB id를 기준으로 선택합니다.
+    # 그리고 입력창 key에도 row_id를 넣어서 다른 주소를 선택하면 밑의 수정폼 값이 즉시 바뀝니다.
+    row_by_id = {str(r.get("id")): r for r in filtered}
+    options = list(row_by_id.keys())
 
-    with st.form(f"{key_prefix}_edit_form"):
-        e_category = st.radio("폴더 ", CATEGORIES, index=CATEGORIES.index(category(row.get("category"))), horizontal=True, key=f"{key_prefix}_cat")
+    def label_for(row_id):
+        r = row_by_id.get(str(row_id), {})
+        return f"[{category(r.get('category'))}] {s(r.get('name'))} / {phone(r.get('phone'))} / 수량 {qty(r.get('quantity'))} / {s(r.get('product_name'))}"
+
+    selected_id = st.selectbox(
+        "수정할 주소 선택",
+        options,
+        format_func=label_for,
+        key=f"{key_prefix}_select_id",
+    )
+    row = row_by_id[str(selected_id)]
+    row_id = row.get("id")
+    safe_row_key = str(row_id).replace("-", "_")
+
+    with st.form(f"{key_prefix}_edit_form_{safe_row_key}"):
+        e_category = st.radio(
+            "폴더 ",
+            CATEGORIES,
+            index=CATEGORIES.index(category(row.get("category"))),
+            horizontal=True,
+            key=f"{key_prefix}_{safe_row_key}_cat",
+        )
         e1, e2 = st.columns([1, 1])
         with e1:
-            e_name = st.text_input("이름 ", value=s(row.get("name")), key=f"{key_prefix}_name")
-            e_tel = st.text_input("전화번호 ", value=phone(row.get("phone")), key=f"{key_prefix}_phone")
-            e_zip = st.text_input("우편번호 ", value=s(row.get("zipcode")), key=f"{key_prefix}_zip")
-            e_quantity = st.number_input("수량 ", min_value=1, value=qty(row.get("quantity")), step=1, key=f"{key_prefix}_qty")
+            e_name = st.text_input("이름 ", value=s(row.get("name")), key=f"{key_prefix}_{safe_row_key}_name")
+            e_tel = st.text_input("전화번호 ", value=phone(row.get("phone")), key=f"{key_prefix}_{safe_row_key}_phone")
+            e_zip = st.text_input("우편번호 ", value=s(row.get("zipcode")), key=f"{key_prefix}_{safe_row_key}_zip")
+            e_quantity = st.number_input("수량 ", min_value=1, value=qty(row.get("quantity")), step=1, key=f"{key_prefix}_{safe_row_key}_qty")
         with e2:
-            e_product = st.text_input("상품명 ", value=s(row.get("product_name")), key=f"{key_prefix}_product")
-            e_message = st.text_input("배송메세지 ", value=s(row.get("delivery_message")) or "문 앞", key=f"{key_prefix}_msg")
-            e_address = st.text_area("주소 ", value=s(row.get("address")), height=110, key=f"{key_prefix}_addr")
-            e_memo = st.text_area("메모 ", value=s(row.get("memo")), height=90, key=f"{key_prefix}_memo")
+            e_product = st.text_input("상품명 ", value=s(row.get("product_name")), key=f"{key_prefix}_{safe_row_key}_product")
+            e_message = st.text_input("배송메세지 ", value=s(row.get("delivery_message")) or "문 앞", key=f"{key_prefix}_{safe_row_key}_msg")
+            e_address = st.text_area("주소 ", value=s(row.get("address")), height=110, key=f"{key_prefix}_{safe_row_key}_addr")
+            e_memo = st.text_area("메모 ", value=s(row.get("memo")), height=90, key=f"{key_prefix}_{safe_row_key}_memo")
         b1, b2 = st.columns(2)
         update = b1.form_submit_button("수정 저장", use_container_width=True)
         delete = b2.form_submit_button("삭제", use_container_width=True)
@@ -421,12 +441,14 @@ def render_manage_view(rows, folder, key_prefix):
                 "delivery_message": e_message,
                 "memo": e_memo,
             })
+            st.cache_data.clear()
             st.success("수정 완료")
             st.rerun()
         if delete:
             delete_row(row_id)
             if str(row_id) in st.session_state.get("export_ids", []):
                 st.session_state.export_ids.remove(str(row_id))
+            st.cache_data.clear()
             st.success("삭제 완료")
             st.rerun()
 
@@ -434,7 +456,6 @@ def render_manage_view(rows, folder, key_prefix):
     st.subheader("주소록 목록")
     for r in filtered:
         st.markdown(address_card_html(r), unsafe_allow_html=True)
-
 
 def ensure_export_state():
     if "export_ids" not in st.session_state:
