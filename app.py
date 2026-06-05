@@ -54,6 +54,16 @@ def category(value):
     return value if value in CATEGORIES else "지인"
 
 
+def category_class(value):
+    return "vendor" if category(value) == "거래처" else "friend"
+
+
+def category_badge(value):
+    c = category(value)
+    cls = category_class(c)
+    return f'<span class="folder-chip {cls}">{escape(c)}</span>'
+
+
 def get_secret(name, default=""):
     try:
         return s(st.secrets.get(name, default))
@@ -63,8 +73,7 @@ def get_secret(name, default=""):
 
 def supabase_base_url():
     url = get_secret("SUPABASE_URL")
-    url = url.rstrip("/")
-    url = url.replace("/rest/v1", "")
+    url = url.rstrip("/").replace("/rest/v1", "")
     return url
 
 
@@ -79,7 +88,6 @@ def api_request(method, table_path, payload=None, query=""):
         raise RuntimeError("Streamlit Secrets에 SUPABASE_URL, SUPABASE_KEY가 필요합니다.")
 
     url = f"{base}/rest/v1/{table_path}{query}"
-    data = None
     headers = {
         "apikey": key,
         "Authorization": f"Bearer {key}",
@@ -88,6 +96,8 @@ def api_request(method, table_path, payload=None, query=""):
     }
     if method in ["POST", "PATCH", "DELETE"]:
         headers["Prefer"] = "return=representation"
+
+    data = None
     if payload is not None:
         data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
 
@@ -95,9 +105,7 @@ def api_request(method, table_path, payload=None, query=""):
     try:
         with urllib.request.urlopen(req, timeout=20) as resp:
             raw = resp.read().decode("utf-8")
-            if not raw:
-                return []
-            return json.loads(raw)
+            return json.loads(raw) if raw else []
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="ignore")
         raise RuntimeError(f"Supabase 오류 {e.code}: {body}")
@@ -116,8 +124,8 @@ def clear_cache():
     fetch_rows.clear()
 
 
-def insert_row(row):
-    payload = {
+def clean_payload(row):
+    return {
         "category": category(row.get("category")),
         "name": s(row.get("name")),
         "phone": phone(row.get("phone")),
@@ -128,25 +136,17 @@ def insert_row(row):
         "delivery_message": s(row.get("delivery_message")) or "문 앞",
         "memo": s(row.get("memo")),
     }
-    result = api_request("POST", "addresses", payload=payload)
+
+
+def insert_row(row):
+    result = api_request("POST", "addresses", payload=clean_payload(row))
     clear_cache()
     return result
 
 
 def update_row(row_id, row):
-    payload = {
-        "category": category(row.get("category")),
-        "name": s(row.get("name")),
-        "phone": phone(row.get("phone")),
-        "zipcode": s(row.get("zipcode")),
-        "address": s(row.get("address")),
-        "quantity": qty(row.get("quantity")),
-        "product_name": s(row.get("product_name")),
-        "delivery_message": s(row.get("delivery_message")) or "문 앞",
-        "memo": s(row.get("memo")),
-    }
     q = f"?id=eq.{urllib.parse.quote(str(row_id))}"
-    result = api_request("PATCH", "addresses", payload=payload, query=q)
+    result = api_request("PATCH", "addresses", payload=clean_payload(row), query=q)
     clear_cache()
     return result
 
@@ -163,7 +163,7 @@ def css():
         """
         <style>
         .stApp { background: linear-gradient(180deg, #fffaf3 0%, #fffdf8 100%); }
-        .main .block-container { padding-top: 1.2rem; padding-bottom: 2rem; max-width: 1220px; }
+        .main .block-container { padding-top: 1.1rem; padding-bottom: 2rem; max-width: 1240px; }
         .hero-card {
             background: linear-gradient(135deg, #fff8ed 0%, #fff0d8 55%, #ffe2b0 100%);
             border: 1px solid #e9c17d; border-radius: 26px; padding: 1.1rem 1.25rem;
@@ -174,8 +174,16 @@ def css():
         .hero-sub { color:#85571a; line-height:1.55; font-size:1rem; }
         .stamp { display:inline-block; margin:9px 6px 0 0; padding:6px 12px; border-radius:999px; background:white; border:1px dashed #c99042; color:#80500d; font-weight:800; font-size:.86rem; }
         .card { background:#ffffffd9; border:1px solid #efe1c5; border-radius:18px; padding:14px 16px; margin-bottom:12px; box-shadow: 0 4px 14px rgba(80,56,14,.05); }
-        .folder-chip { display:inline-block; padding:4px 10px; margin-right:6px; border-radius:999px; background:#fff7ea; border:1px solid #efcf97; color:#8b5a16; font-weight:800; font-size:.83rem; }
+        .card.friend { border-left: 7px solid #3b82f6; }
+        .card.vendor { border-left: 7px solid #f97316; }
+        .export-card { min-height: 118px; }
+        .folder-chip { display:inline-block; padding:4px 10px; margin-right:6px; border-radius:999px; font-weight:900; font-size:.83rem; }
+        .folder-chip.friend { background:#eaf3ff; border:1px solid #9cc5ff; color:#1655a7; }
+        .folder-chip.vendor { background:#fff0df; border:1px solid #ffbd7a; color:#a94c00; }
         .small-note { color:#8a6b3d; font-size:.92rem; }
+        .mini-title { font-weight:900; font-size:1.04rem; color:#2d2f36; }
+        .quick-box { background:#fffaf0; border:1px solid #f0d8a8; border-radius:18px; padding:12px 14px; margin-bottom:10px; }
+        .right-panel { background:#fffdfa; border:1px solid #ead7b6; border-radius:18px; padding:14px 16px; margin-bottom:10px; }
         div[data-testid="stMetric"] { background:#fffaf0; border:1px solid #f0d8a8; border-radius:18px; padding:10px 14px; }
         div[data-testid="stForm"] { background:rgba(255,255,255,.84); border:1px solid #efdfc0; border-radius:20px; padding:12px; }
         div.stButton > button, div.stDownloadButton > button {
@@ -188,7 +196,6 @@ def css():
 
 
 def hero():
-    # 파일을 따로 올리지 않도록 app.py 안에 SVG 일러스트를 직접 넣음
     svg = """
     <svg viewBox="0 0 220 160" width="170" height="124" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="delivery illustration">
       <defs>
@@ -201,9 +208,7 @@ def hero():
       <rect x="42" y="45" width="65" height="28" rx="8" fill="#fff7e7" stroke="#b77420" stroke-width="2"/>
       <path d="M42 60 L74 83 L107 60" fill="none" stroke="#9a5b0f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
       <rect x="132" y="70" width="48" height="35" rx="6" fill="#df6b32" stroke="#8a3d12" stroke-width="2"/>
-      <path d="M132 80 h48" stroke="#ffdd9b" stroke-width="4"/>
-      <path d="M145 70 v35" stroke="#ffdd9b" stroke-width="4"/>
-      <rect x="34" y="116" width="118" height="12" rx="6" fill="#6e450d" opacity=".18"/>
+      <path d="M132 80 h48" stroke="#ffdd9b" stroke-width="4"/><path d="M145 70 v35" stroke="#ffdd9b" stroke-width="4"/>
       <circle cx="57" cy="130" r="9" fill="#70420a"/><circle cx="151" cy="130" r="9" fill="#70420a"/>
       <path d="M39 130 h125" stroke="#6e450d" stroke-width="6" stroke-linecap="round"/>
       <path d="M169 90 c17 1 24 10 25 23" fill="none" stroke="#8a5617" stroke-width="5" stroke-linecap="round"/>
@@ -218,7 +223,7 @@ def hero():
             <div>
               <div class="hero-title">식혜명가 주소록 즐겨찾기</div>
               <div class="hero-sub">
-                자주 보내는 지인과 거래처 주소를 즐겨찾기처럼 저장하고, 발송할 때 상품명과 배송메세지를 바로 조정합니다.<br>
+                자주 보내는 지인과 거래처 주소를 즐겨찾기처럼 저장하고, 발송 전 상품명·수량·배송메세지를 바로 조정합니다.<br>
                 앱을 껐다 켜거나 재배포해도 주소록은 Supabase에 계속 남습니다.
               </div>
               <span class="stamp">📁 지인</span><span class="stamp">🏢 거래처</span><span class="stamp">💾 영구저장</span><span class="stamp">✍️ 발송 전 수정</span>
@@ -228,6 +233,21 @@ def hero():
         """,
         unsafe_allow_html=True,
     )
+
+
+def address_card_html(row, extra_class=""):
+    cls = category_class(row.get("category"))
+    return f"""
+    <div class="card {cls} {extra_class}">
+        {category_badge(row.get('category'))}
+        <span class="mini-title">{escape(s(row.get('name')))}</span>
+        &nbsp; {escape(phone(row.get('phone')))} &nbsp; 수량 {qty(row.get('quantity'))}<br>
+        <span class="small-note">상품명:</span> {escape(s(row.get('product_name')))}<br>
+        <span class="small-note">주소:</span> {escape(s(row.get('zipcode')))} {escape(s(row.get('address')))}<br>
+        <span class="small-note">배송메세지:</span> {escape(s(row.get('delivery_message')) or '문 앞')}<br>
+        <span class="small-note">메모:</span> {escape(s(row.get('memo')))}
+    </div>
+    """
 
 
 def col_name(n):
@@ -354,6 +374,86 @@ def row_matches(row, keyword, folder):
     return keyword_ok and folder_ok
 
 
+def render_manage_view(rows, folder, key_prefix):
+    if folder == "전체":
+        base_rows = rows
+    else:
+        base_rows = [r for r in rows if category(r.get("category")) == folder]
+
+    keyword = st.text_input("검색", placeholder="이름 / 전화번호 / 주소 / 상품명", key=f"{key_prefix}_search")
+    filtered = [r for r in base_rows if row_matches(r, keyword, "전체")]
+    st.caption(f"{folder} 표시: {len(filtered)}건")
+
+    if not filtered:
+        st.info("표시할 주소가 없습니다.")
+        return
+
+    labels = [f"[{category(r.get('category'))}] {s(r.get('name'))} / {phone(r.get('phone'))} / 수량 {qty(r.get('quantity'))} / {s(r.get('product_name'))}" for r in filtered]
+    selected = st.selectbox("수정할 주소 선택", labels, key=f"{key_prefix}_select")
+    row = filtered[labels.index(selected)]
+    row_id = row.get("id")
+
+    with st.form(f"{key_prefix}_edit_form"):
+        e_category = st.radio("폴더 ", CATEGORIES, index=CATEGORIES.index(category(row.get("category"))), horizontal=True, key=f"{key_prefix}_cat")
+        e1, e2 = st.columns([1, 1])
+        with e1:
+            e_name = st.text_input("이름 ", value=s(row.get("name")), key=f"{key_prefix}_name")
+            e_tel = st.text_input("전화번호 ", value=phone(row.get("phone")), key=f"{key_prefix}_phone")
+            e_zip = st.text_input("우편번호 ", value=s(row.get("zipcode")), key=f"{key_prefix}_zip")
+            e_quantity = st.number_input("수량 ", min_value=1, value=qty(row.get("quantity")), step=1, key=f"{key_prefix}_qty")
+        with e2:
+            e_product = st.text_input("상품명 ", value=s(row.get("product_name")), key=f"{key_prefix}_product")
+            e_message = st.text_input("배송메세지 ", value=s(row.get("delivery_message")) or "문 앞", key=f"{key_prefix}_msg")
+            e_address = st.text_area("주소 ", value=s(row.get("address")), height=110, key=f"{key_prefix}_addr")
+            e_memo = st.text_area("메모 ", value=s(row.get("memo")), height=90, key=f"{key_prefix}_memo")
+        b1, b2 = st.columns(2)
+        update = b1.form_submit_button("수정 저장", use_container_width=True)
+        delete = b2.form_submit_button("삭제", use_container_width=True)
+        if update:
+            update_row(row_id, {
+                "category": e_category,
+                "name": e_name,
+                "phone": e_tel,
+                "zipcode": e_zip,
+                "address": e_address,
+                "quantity": e_quantity,
+                "product_name": e_product,
+                "delivery_message": e_message,
+                "memo": e_memo,
+            })
+            st.success("수정 완료")
+            st.rerun()
+        if delete:
+            delete_row(row_id)
+            if str(row_id) in st.session_state.get("export_ids", []):
+                st.session_state.export_ids.remove(str(row_id))
+            st.success("삭제 완료")
+            st.rerun()
+
+    st.markdown("---")
+    st.subheader("주소록 목록")
+    for r in filtered:
+        st.markdown(address_card_html(r), unsafe_allow_html=True)
+
+
+def ensure_export_state():
+    if "export_ids" not in st.session_state:
+        st.session_state.export_ids = []
+
+
+def add_export_id(row_id):
+    ensure_export_state()
+    rid = str(row_id)
+    if rid not in st.session_state.export_ids:
+        st.session_state.export_ids.append(rid)
+
+
+def remove_export_id(row_id):
+    ensure_export_state()
+    rid = str(row_id)
+    st.session_state.export_ids = [x for x in st.session_state.export_ids if x != rid]
+
+
 def main():
     app_pw = get_secret("APP_PASSWORD")
     if app_pw:
@@ -363,6 +463,7 @@ def main():
 
     css()
     hero()
+    ensure_export_state()
 
     if not supabase_base_url() or not supabase_key():
         st.error("Streamlit Secrets에 SUPABASE_URL, SUPABASE_KEY를 먼저 넣어야 합니다.")
@@ -408,7 +509,7 @@ def main():
             st.success(f"{ok}건 가져오기 완료")
             st.rerun()
 
-    tab_add, tab_manage, tab_export = st.tabs(["📮 주소 등록", "📁 지인 / 거래처", "🚚 엑셀 다운로드"])
+    tab_add, tab_manage, tab_export = st.tabs(["📮 주소 등록", "📁 지인 / 거래처", "🚚 발송 엑셀 다운로드"])
 
     with tab_add:
         st.subheader("새 주소 추가")
@@ -445,101 +546,67 @@ def main():
                     st.rerun()
 
     with tab_manage:
-        st.subheader("검색 / 수정 / 삭제")
-        m1, m2 = st.columns([1, 1.5])
-        with m1:
-            folder = st.radio("폴더 보기", ["전체", "지인", "거래처"], horizontal=True)
-        with m2:
-            keyword = st.text_input("검색", placeholder="이름 / 전화번호 / 주소 / 상품명")
-        filtered = [r for r in rows if row_matches(r, keyword, folder)]
-        st.caption(f"현재 표시: {len(filtered)}건")
-
-        if filtered:
-            labels = [f"[{category(r.get('category'))}] {s(r.get('name'))} / {phone(r.get('phone'))} / 수량 {qty(r.get('quantity'))} / {s(r.get('product_name'))}" for r in filtered]
-            selected = st.selectbox("수정할 주소 선택", labels)
-            row = filtered[labels.index(selected)]
-            row_id = row.get("id")
-            with st.form("edit_form"):
-                e_category = st.radio("폴더 ", CATEGORIES, index=CATEGORIES.index(category(row.get("category"))), horizontal=True)
-                e1, e2 = st.columns([1, 1])
-                with e1:
-                    e_name = st.text_input("이름 ", value=s(row.get("name")))
-                    e_tel = st.text_input("전화번호 ", value=phone(row.get("phone")))
-                    e_zip = st.text_input("우편번호 ", value=s(row.get("zipcode")))
-                    e_quantity = st.number_input("수량 ", min_value=1, value=qty(row.get("quantity")), step=1)
-                with e2:
-                    e_product = st.text_input("상품명 ", value=s(row.get("product_name")))
-                    e_message = st.text_input("배송메세지 ", value=s(row.get("delivery_message")) or "문 앞")
-                    e_address = st.text_area("주소 ", value=s(row.get("address")), height=110)
-                    e_memo = st.text_area("메모 ", value=s(row.get("memo")), height=90)
-                b1, b2 = st.columns(2)
-                update = b1.form_submit_button("수정 저장", use_container_width=True)
-                delete = b2.form_submit_button("삭제", use_container_width=True)
-                if update:
-                    update_row(row_id, {
-                        "category": e_category,
-                        "name": e_name,
-                        "phone": e_tel,
-                        "zipcode": e_zip,
-                        "address": e_address,
-                        "quantity": e_quantity,
-                        "product_name": e_product,
-                        "delivery_message": e_message,
-                        "memo": e_memo,
-                    })
-                    st.success("수정 완료")
-                    st.rerun()
-                if delete:
-                    delete_row(row_id)
-                    st.success("삭제 완료")
-                    st.rerun()
-
-            st.markdown("---")
-            st.subheader("주소록 목록")
-            for r in filtered:
-                st.markdown(
-                    f"""
-                    <div class="card">
-                        <span class="folder-chip">{escape(category(r.get('category')))}</span>
-                        <b>{escape(s(r.get('name')))}</b> &nbsp; {escape(phone(r.get('phone')))} &nbsp; 수량 {qty(r.get('quantity'))}<br>
-                        <span class="small-note">상품명:</span> {escape(s(r.get('product_name')))}<br>
-                        <span class="small-note">주소:</span> {escape(s(r.get('zipcode')))} {escape(s(r.get('address')))}<br>
-                        <span class="small-note">배송메세지:</span> {escape(s(r.get('delivery_message')))}<br>
-                        <span class="small-note">메모:</span> {escape(s(r.get('memo')))}
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-        else:
-            st.info("표시할 주소가 없습니다.")
+        st.subheader("주소록 관리")
+        st.caption("위 탭에서 전체 / 지인 / 거래처를 눌러 따로 볼 수 있습니다. 지인은 파란색, 거래처는 주황색으로 표시됩니다.")
+        all_tab, friend_tab, vendor_tab = st.tabs(["전체 주소", "지인", "거래처"])
+        with all_tab:
+            render_manage_view(rows, "전체", "manage_all")
+        with friend_tab:
+            render_manage_view(rows, "지인", "manage_friend")
+        with vendor_tab:
+            render_manage_view(rows, "거래처", "manage_vendor")
 
     with tab_export:
         st.subheader("발송 엑셀 다운로드")
-        st.caption("주소록 기본값을 불러온 뒤, 이번 발송에 맞게 상품명·수량·배송메세지를 수정해서 엑셀로 뽑을 수 있습니다.")
+        st.caption("왼쪽 주소록에서 필요한 사람을 눌러 오른쪽 발송목록에 담고, 상품명·수량·배송메세지를 수정한 뒤 엑셀로 받습니다.")
 
-        x1, x2 = st.columns([1, 1.4])
+        x1, x2 = st.columns([1.05, 1.35], gap="large")
+
         with x1:
-            export_folder = st.radio("내보낼 폴더", ["전체", "지인", "거래처"], horizontal=True)
+            st.markdown('<div class="quick-box"><b>왼쪽 주소록</b><br><span class="small-note">필요한 주소를 눌러 오른쪽 발송목록으로 보냅니다.</span></div>', unsafe_allow_html=True)
+            export_folder = st.radio("주소록 폴더", ["전체", "지인", "거래처"], horizontal=True, key="export_folder")
+            export_keyword = st.text_input("주소록 검색", placeholder="이름 / 주소 / 상품명", key="export_keyword")
+            export_rows = [r for r in rows if row_matches(r, export_keyword, export_folder)]
+            st.caption(f"검색 결과: {len(export_rows)}건")
+
+            if not export_rows:
+                st.info("왼쪽에 표시할 주소가 없습니다.")
+            else:
+                for r in export_rows:
+                    rid = str(r.get("id"))
+                    already = rid in st.session_state.export_ids
+                    st.markdown(address_card_html(r, "export-card"), unsafe_allow_html=True)
+                    btn_label = "이미 발송목록에 있음" if already else "→ 오른쪽 발송목록에 추가"
+                    if st.button(btn_label, key=f"add_export_{rid}", disabled=already, use_container_width=True):
+                        add_export_id(rid)
+                        st.rerun()
+
         with x2:
-            export_keyword = st.text_input("내보내기 검색", placeholder="이름 / 주소 / 상품명")
+            st.markdown('<div class="right-panel"><b>오른쪽 발송목록</b><br><span class="small-note">여기 담긴 사람만 엑셀로 출력됩니다.</span></div>', unsafe_allow_html=True)
+            by_id = {str(r.get("id")): r for r in rows}
+            selected_rows = [by_id[rid] for rid in st.session_state.export_ids if rid in by_id]
+            st.write(f"선택된 발송 건수: **{len(selected_rows)}건**")
 
-        export_rows = [r for r in rows if row_matches(r, export_keyword, export_folder)]
-        export_labels = [
-            f"#{r.get('id')} [{category(r.get('category'))}] {s(r.get('name'))} / {phone(r.get('phone'))} / 수량 {qty(r.get('quantity'))} / {s(r.get('product_name'))}"
-            for r in export_rows
-        ]
+            if not selected_rows:
+                st.info("왼쪽 주소록에서 보낼 사람을 추가하세요.")
+            else:
+                remove_labels = [f"[{category(r.get('category'))}] {s(r.get('name'))} / {phone(r.get('phone'))}" for r in selected_rows]
+                remove_map = {label: str(r.get("id")) for label, r in zip(remove_labels, selected_rows)}
+                remove_choice = st.multiselect("발송목록에서 제외할 사람", remove_labels, key="remove_choice")
+                r1, r2 = st.columns(2)
+                with r1:
+                    if st.button("선택 제외", use_container_width=True):
+                        for label in remove_choice:
+                            remove_export_id(remove_map[label])
+                        st.rerun()
+                with r2:
+                    if st.button("모두 비우기", use_container_width=True):
+                        st.session_state.export_ids = []
+                        st.rerun()
 
-        if export_labels:
-            chosen = st.multiselect("보낼 사람 선택", export_labels, default=export_labels)
-            chosen_rows = [export_rows[export_labels.index(label)] for label in chosen]
-            st.write(f"선택된 발송 건수: **{len(chosen_rows)}건**")
-
-            if chosen_rows:
                 st.markdown("#### 엑셀 출력 전 수정")
-                st.caption("아래 표에서 바꾸는 내용은 우선 다운로드 엑셀에 반영됩니다. 필요하면 버튼으로 주소록 기본값에도 저장할 수 있습니다.")
-
                 edit_table = []
-                for r in chosen_rows:
+                for r in selected_rows:
                     edit_table.append({
                         "id": r.get("id"),
                         "폴더": category(r.get("category")),
@@ -564,13 +631,13 @@ def main():
                         "상품명": st.column_config.TextColumn("상품명", width="medium"),
                         "배송메세지": st.column_config.TextColumn("배송메세지", width="medium"),
                     },
-                    key="export_editor",
+                    key="export_editor_v2",
                 )
 
-                by_id = {str(r.get("id")): r for r in chosen_rows}
+                selected_by_id = {str(r.get("id")): r for r in selected_rows}
                 final_rows = []
                 for item in edited_table:
-                    original = by_id.get(str(item.get("id")))
+                    original = selected_by_id.get(str(item.get("id")))
                     if not original:
                         continue
                     new_row = dict(original)
@@ -586,7 +653,6 @@ def main():
                             update_row(r.get("id"), r)
                         st.success("주소록 기본값 저장 완료")
                         st.rerun()
-
                 with down_col:
                     st.download_button(
                         "CJ 양식 엑셀 다운로드",
@@ -596,10 +662,6 @@ def main():
                         use_container_width=True,
                         disabled=not final_rows,
                     )
-            else:
-                st.info("보낼 사람을 선택하세요.")
-        else:
-            st.info("내보낼 대상이 없습니다.")
 
 
 if __name__ == "__main__":
