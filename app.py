@@ -13,6 +13,8 @@ st.set_page_config(page_title="우체국 느낌 주소록", page_icon="📮", la
 DATA_FILE = Path("address_book.csv")
 FIELDS = ["분류", "이름", "전화번호", "우편번호", "주소", "수량", "상품명", "배송메세지", "메모"]
 CATEGORIES = ["지인", "거래처"]
+BANNER_IMAGE = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3NjAiIGhlaWdodD0iMjYwIiB2aWV3Qm94PSIwIDAgNzYwIDI2MCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2ZmZjhlOCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjAuNTgiIHN0b3AtY29sb3I9IiNmZmUwYTgiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZmZiMzVjIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJ0cnVjayIgeDE9IjAiIHkxPSIwIiB4Mj0iMSIgeTI9IjEiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNmZmZmZmYiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZmZkOTk2Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGZpbHRlciBpZD0ic2hhZG93IiB4PSItMjAlIiB5PSItMjAlIiB3aWR0aD0iMTQwJSIgaGVpZ2h0PSIxNDAlIj4KICAgICAgPGZlRHJvcFNoYWRvdyBkeD0iMCIgZHk9IjgiIHN0ZERldmlhdGlvbj0iOCIgZmxvb2QtY29sb3I9IiM5YTViMTIiIGZsb29kLW9wYWNpdHk9IjAuMTgiLz4KICAgIDwvZmlsdGVyPgogIDwvZGVmcz4KICA8cmVjdCB3aWR0aD0iNzYwIiBoZWlnaHQ9IjI2MCIgcng9IjMyIiBmaWxsPSJ1cmwoI2JnKSIvPgogIDxjaXJjbGUgY3g9IjY2MCIgY3k9IjQ2IiByPSI2MiIgZmlsbD0iI2ZmZjJkNSIgb3BhY2l0eT0iMC44MiIvPgogIDxjaXJjbGUgY3g9IjkyIiBjeT0iMjA2IiByPSI3MCIgZmlsbD0iI2ZmZjdlNyIgb3BhY2l0eT0iMC43MCIvPgogIDxwYXRoIGQ9Ik0wIDIwMiBDMTIwIDE3MCAyMDIgMjI2IDMyMCAxOTQgQzQ1MCAxNjAgNTIwIDE4NiA3NjAgMTM2IEw3NjAgMjYwIEwwIDI2MCBaIiBmaWxsPSIjZmZmYWYxIiBvcGFjaXR5PSIwLjc1Ii8+CgogIDxnIGZpbHRlcj0idXJsKCNzaGFkb3cpIj4KICAgIDxyZWN0IHg9IjgyIiB5PSI3NCIgd2lkdGg9IjE0NSIgaGVpZ2h0PSIxMzAiIHJ4PSIyMCIgZmlsbD0iI2ZmZmZmZiIvPgogICAgPHJlY3QgeD0iMTAzIiB5PSI1NCIgd2lkdGg9IjEwNCIgaGVpZ2h0PSI0NCIgcng9IjEyIiBmaWxsPSIjZTY4YTI2Ii8+CiAgICA8cmVjdCB4PSIxMTciIHk9IjEwOCIgd2lkdGg9Ijc0IiBoZWlnaHQ9IjcwIiByeD0iMTIiIGZpbGw9IiNmZmYwZDciIHN0cm9rZT0iI2RkOGIyZSIgc3Ryb2tlLXdpZHRoPSI1Ii8+CiAgICA8cGF0aCBkPSJNMTMzIDEyOCBMMTc3IDEyOCBNMTMzIDE0NiBMMTc3IDE0NiBNMTMzIDE2NCBMMTYwIDE2NCIgc3Ryb2tlPSIjOWI1YTE3IiBzdHJva2Utd2lkdGg9IjciIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogICAgPGNpcmNsZSBjeD0iMTE1IiBjeT0iODAiIHI9IjkiIGZpbGw9IiNmZmZmZmYiIG9wYWNpdHk9IjAuOSIvPgogICAgPGNpcmNsZSBjeD0iMTkzIiBjeT0iODAiIHI9IjkiIGZpbGw9IiNmZmZmZmYiIG9wYWNpdHk9IjAuOSIvPgogIDwvZz4KCiAgPGcgZmlsdGVyPSJ1cmwoI3NoYWRvdykiPgogICAgPHJlY3QgeD0iMzAyIiB5PSIxMTYiIHdpZHRoPSIyMjAiIGhlaWdodD0iODIiIHJ4PSIxOCIgZmlsbD0idXJsKCN0cnVjaykiIHN0cm9rZT0iI2RiOGEyNyIgc3Ryb2tlLXdpZHRoPSI1Ii8+CiAgICA8cGF0aCBkPSJNNTIyIDE0NSBINTg0IEw2MTYgMTc4IFYxOTggSDUyMiBaIiBmaWxsPSIjZmZmNGRmIiBzdHJva2U9IiNkYjhhMjciIHN0cm9rZS13aWR0aD0iNSIvPgogICAgPHJlY3QgeD0iNTQxIiB5PSIxNTMiIHdpZHRoPSI0MiIgaGVpZ2h0PSIyNiIgcng9IjciIGZpbGw9IiNmZmQyODQiLz4KICAgIDxwYXRoIGQ9Ik0zMzAgMTQyIEg0NzgiIHN0cm9rZT0iIzlhNWIxMiIgc3Ryb2tlLXdpZHRoPSI5IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMzUiLz4KICAgIDxwYXRoIGQ9Ik0zMzAgMTY2IEg0NDgiIHN0cm9rZT0iIzlhNWIxMiIgc3Ryb2tlLXdpZHRoPSI5IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMjUiLz4KICAgIDxjaXJjbGUgY3g9IjM1NiIgY3k9IjIwNSIgcj0iMjIiIGZpbGw9IiM2YzQzMGYiLz4KICAgIDxjaXJjbGUgY3g9IjM1NiIgY3k9IjIwNSIgcj0iMTAiIGZpbGw9IiNmZmQ4OTQiLz4KICAgIDxjaXJjbGUgY3g9IjU2MCIgY3k9IjIwNSIgcj0iMjIiIGZpbGw9IiM2YzQzMGYiLz4KICAgIDxjaXJjbGUgY3g9IjU2MCIgY3k9IjIwNSIgcj0iMTAiIGZpbGw9IiNmZmQ4OTQiLz4KICA8L2c+CgogIDxnIGZpbHRlcj0idXJsKCNzaGFkb3cpIj4KICAgIDxyZWN0IHg9IjI0NiIgeT0iNjQiIHdpZHRoPSI4NCIgaGVpZ2h0PSI3MiIgcng9IjE0IiBmaWxsPSIjZmZjZjgzIi8+CiAgICA8cGF0aCBkPSJNMjQ2IDg4IEgzMzAiIHN0cm9rZT0iI2FkNjcxOCIgc3Ryb2tlLXdpZHRoPSI0IiBvcGFjaXR5PSIwLjU1Ii8+CiAgICA8cGF0aCBkPSJNMjg4IDY0IFYxMzYiIHN0cm9rZT0iI2FkNjcxOCIgc3Ryb2tlLXdpZHRoPSI0IiBvcGFjaXR5PSIwLjU1Ii8+CiAgICA8cmVjdCB4PSI1OTQiIHk9Ijc4IiB3aWR0aD0iOTIiIGhlaWdodD0iODQiIHJ4PSIxNiIgZmlsbD0iI2ZmZDg5NyIvPgogICAgPHBhdGggZD0iTTU5NCAxMDYgSDY4NiIgc3Ryb2tlPSIjYWQ2NzE4IiBzdHJva2Utd2lkdGg9IjQiIG9wYWNpdHk9IjAuNTAiLz4KICAgIDxwYXRoIGQ9Ik02NDAgNzggVjE2MiIgc3Ryb2tlPSIjYWQ2NzE4IiBzdHJva2Utd2lkdGg9IjQiIG9wYWNpdHk9IjAuNTAiLz4KICA8L2c+CgogIDxnIG9wYWNpdHk9IjAuODgiPgogICAgPHBhdGggZD0iTTUyIDQ0IEM3NCAyOCA5NiAyOCAxMTggNDQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2Q1ODcyYyIgc3Ryb2tlLXdpZHRoPSI3IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICAgIDxwYXRoIGQ9Ik02MzIgMzQgQzY2MiAxNiA2OTIgMTggNzIwIDQwIiBmaWxsPSJub25lIiBzdHJva2U9IiNkNTg3MmMiIHN0cm9rZS13aWR0aD0iNyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgICA8Y2lyY2xlIGN4PSIyNTQiIGN5PSI0MiIgcj0iNyIgZmlsbD0iI2YxYTEzYiIvPgogICAgPGNpcmNsZSBjeD0iNzA0IiBjeT0iMjAwIiByPSI4IiBmaWxsPSIjZjFhMTNiIi8+CiAgICA8Y2lyY2xlIGN4PSI1NiIgY3k9IjEzNyIgcj0iNiIgZmlsbD0iI2YxYTEzYiIvPgogIDwvZz4KCiAgPHRleHQgeD0iNTAiIHk9IjIzOCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjIwIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjN2M0YTBjIj5BZGRyZXNzIEJvb2sgwrcgRGVsaXZlcnkgRXhwb3J0PC90ZXh0Pgo8L3N2Zz4="
+
 
 CJ_HEADERS = [
     "번호", "묶음배송번호", "주문번호", "택배사", "운송장번호", "분리배송 Y/N", "분리배송 출고예정일",
@@ -48,11 +50,15 @@ def css():
             display:flex; gap: 18px; align-items:center;
         }
         .hero-illust {
-            width: 112px; height: 112px; border-radius: 20px;
-            background: linear-gradient(135deg, #ffedd3 0%, #fff9ee 100%);
-            display:flex; align-items:center; justify-content:center;
-            font-size: 54px; border:1px solid #efc98f;
-            flex: 0 0 112px;
+            width: 260px; height: 138px; border-radius: 22px;
+            background: #fff7ec;
+            border:1px solid #efc98f;
+            flex: 0 0 260px;
+            overflow:hidden;
+            box-shadow: 0 8px 20px rgba(116, 69, 11, 0.10);
+        }
+        .hero-illust img {
+            width:100%; height:100%; object-fit:cover; display:block;
         }
         .hero-title {
             font-weight: 800; font-size: 1.9rem; color: #6a3f06; margin-bottom: 4px;
@@ -95,10 +101,10 @@ def css():
 
 def hero():
     st.markdown(
-        """
+        f"""
         <div class="hero-card">
             <div class="hero-top">
-                <div class="hero-illust">📮</div>
+                <div class="hero-illust"><img src="{BANNER_IMAGE}" alt="delivery banner"></div>
                 <div>
                     <div class="hero-title">우체국 느낌 주소록 · CJ택배 엑셀</div>
                     <div class="hero-sub">
@@ -430,7 +436,7 @@ def main():
                 """,
                 unsafe_allow_html=True,
             )
-            st.info("원하면 다음 버전에서 실제 AI 일러스트 배너 이미지도 따로 넣어줄 수 있어요.")
+            st.success("AI 일러스트 느낌 배너가 적용된 버전입니다.")
 
     with tab_list:
         st.subheader("주소록 관리")
